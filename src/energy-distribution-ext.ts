@@ -325,7 +325,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
     ) {
       const currentStates = entityStates.getStates();
 
-      if (!states || !equal(states, currentStates)) {
+      if (!states || livePowerChanged || !equal(states, currentStates)) {
         this._lastStates = currentStates;
         states = currentStates;
       }
