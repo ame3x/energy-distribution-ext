@@ -31,3 +31,10 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Upload built card
+        uses: actions/upload-artifact@v4
+        with:
+          name: energy-distribution-ext
+          path: dist/energy-distribution-ext.js
+          if-no-files-found: error
