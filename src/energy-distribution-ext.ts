@@ -1015,6 +1015,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
 
     const getDeviceRenderFn = (deviceIndex: number, importIcon: string, exportIcon: string): NodeRenderFn => {
       const device: DeviceNode = entityStates.devices[deviceIndex];
+      device.updateHass(this.hass);
       device.exportIcon = exportIcon;
       device.importIcon = importIcon;
       return this._getNodeRenderFn(device.cssClass, device.name || html`&nbsp;`, (target, circleSize, states, overrideElectricPrefix, overrideGasPrefix) => device.render(target, circleSize, states, overrideElectricPrefix, overrideGasPrefix))
