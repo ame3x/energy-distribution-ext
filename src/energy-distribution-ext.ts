@@ -374,7 +374,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
 
   //================================================================================================================================================================================//
 
-  private _render = memoizeOne((width: number, states?: States): TemplateResult => {
+  private _render = (width: number, states?: States): TemplateResult => {
     this._calculateLayout(width);
 
     const electricUnitPrefix: SIUnitPrefixes | undefined = states && this._electricUnitPrefixes === UnitPrefixes.Unified ? calculateEnergyUnitPrefix(new Decimal(states.largestElectricValue), this._prefixThreshold, this._energyUnitsConfig) : undefined;
@@ -388,7 +388,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
         ${this._renderGrid(states, electricUnitPrefix, gasUnitPrefix)}
       </div>
     `;
-  });
+  };
 
   //================================================================================================================================================================================//
 
