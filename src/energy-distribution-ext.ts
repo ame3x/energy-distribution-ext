@@ -1331,7 +1331,6 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
   //================================================================================================================================================================================//
 
   private _clearCaches(): void {
-    this._render.clear();
     this._lastRefresh = 0;
     this._lastStates = undefined;
   }
