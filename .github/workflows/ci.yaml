@@ -6,11 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache pnpm modules
         id: cache-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.pnpm-store
@@ -20,9 +20,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.2.1
+        uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 9.15.9
           run_install: false
 
       - name: Install Packages
@@ -31,3 +31,10 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Upload built card
+        uses: actions/upload-artifact@v4
+        with:
+          name: energy-distribution-ext
+          path: dist/energy-distribution-ext.js
+          if-no-files-found: error

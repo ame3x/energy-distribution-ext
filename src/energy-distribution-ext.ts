@@ -12,7 +12,7 @@ import { SolarNode } from "@/nodes/solar";
 import { Flows, States } from "@/nodes";
 import { DataStatus, EntityStates } from "@/states/entity-states";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { AnimationMode, checkEnumValue, CssClass, DateRange, DateRangeDisplayMode, DevicesLayout, DisplayMode, EnergyDirection, EnergyType, EnergyUnits, GasSourcesMode, InactiveFlowsMode, LowCarbonDisplayMode, Scale, SIUnitPrefixes, UnitPrefixes, VolumeUnits } from "@/enums";
+import { AnimationMode, checkEnumValue, CssClass, DateRange, DateRangeDisplayMode, DeviceClasses, DevicesLayout, DisplayMode, EnergyDirection, EnergyType, EnergyUnits, GasSourcesMode, InactiveFlowsMode, LowCarbonDisplayMode, Scale, SIUnitPrefixes, UnitPrefixes, VolumeUnits } from "@/enums";
 import { EDITOR_ELEMENT_NAME } from "@/ui-editor/ui-editor";
 import { CIRCLE_STROKE_WIDTH_SEGMENTS, DOT_RADIUS, HOMEPAGE, ICON_PADDING, POWER_UNITS } from "@/const";
 import { AppearanceOptions, EditorPages, EnergyDistributionExtConfig, EnergyUnitsConfig, EnergyUnitsOptions, FlowsOptions, GlobalOptions, HomeOptions, LowCarbonOptions, NodeConfig } from "@/config";
@@ -255,6 +255,10 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
 
   protected render(): TemplateResult {
     const entityStates: EntityStates = this._entityStates;
+    
+    if (entityStates && this.hass) {
+      entityStates.hass = this.hass;
+    }
 
     if (!this._config || !this.hass || !entityStates || !entityStates.isConfigPresent) {
       return html`
@@ -290,14 +294,43 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
     const now: number = Date.now();
     let states: States | undefined = this._lastStates;
 
-    if (!states || now >= this._lastRefresh + this._refreshPeriod) {
-      const currentStates: States | undefined = entityStates.getStates();
+    const devices = this._config.devices ?? [];
 
-      if (!states || !equal(states, currentStates)) {
+    const livePowerChanged = devices.some((device, index) => {
+      const entityId = device.secondary_info?.entity_id;
+      if (!entityId) return false;
+
+      const entity = this.hass.states[entityId];
+      if (entity?.attributes.device_class !== DeviceClasses.Power) {
+        return false;
+      }
+
+      const power = Number(entity.state);
+      const currentValue =
+        entity.state === "unknown" ||
+        entity.state === "unavailable" ||
+        !Number.isFinite(power)
+          ? NaN
+          : power;
+
+      const previousValue = states?.devicesSecondary[index];
+
+      return !Object.is(currentValue, previousValue);
+    });
+
+    if (
+      !states ||
+      livePowerChanged ||
+      now >= this._lastRefresh + this._refreshPeriod
+    ) {
+      const currentStates = entityStates.getStates();
+
+      if (!states || livePowerChanged || !equal(states, currentStates)) {
         this._lastStates = currentStates;
-        this._lastRefresh = now;
         states = currentStates;
       }
+
+      this._lastRefresh = now;
     }
 
     return html`
@@ -341,7 +374,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
 
   //================================================================================================================================================================================//
 
-  private _render = memoizeOne((width: number, states?: States): TemplateResult => {
+  private _render = (width: number, states?: States): TemplateResult => {
     this._calculateLayout(width);
 
     const electricUnitPrefix: SIUnitPrefixes | undefined = states && this._electricUnitPrefixes === UnitPrefixes.Unified ? calculateEnergyUnitPrefix(new Decimal(states.largestElectricValue), this._prefixThreshold, this._energyUnitsConfig) : undefined;
@@ -355,7 +388,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
         ${this._renderGrid(states, electricUnitPrefix, gasUnitPrefix)}
       </div>
     `;
-  });
+  };
 
   //================================================================================================================================================================================//
 
@@ -982,6 +1015,7 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
 
     const getDeviceRenderFn = (deviceIndex: number, importIcon: string, exportIcon: string): NodeRenderFn => {
       const device: DeviceNode = entityStates.devices[deviceIndex];
+      device.updateHass(this.hass);
       device.exportIcon = exportIcon;
       device.importIcon = importIcon;
       return this._getNodeRenderFn(device.cssClass, device.name || html`&nbsp;`, (target, circleSize, states, overrideElectricPrefix, overrideGasPrefix) => device.render(target, circleSize, states, overrideElectricPrefix, overrideGasPrefix))
@@ -1297,7 +1331,6 @@ export default class EnergyDistributionExt extends SubscribeMixin(LitElement) {
   //================================================================================================================================================================================//
 
   private _clearCaches(): void {
-    this._render.clear();
     this._lastRefresh = 0;
     this._lastStates = undefined;
   }

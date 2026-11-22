@@ -55,7 +55,7 @@ export abstract class Node<T> {
   protected readonly gasUnits: string;
   protected readonly showSegmentGaps: boolean;
   protected readonly useHassStyles: boolean;
-  protected readonly hass: HomeAssistant;
+  protected hass: HomeAssistant;
   protected readonly style: CSSStyleDeclaration;
 
   protected abstract readonly colours: Colours;
@@ -146,6 +146,11 @@ export abstract class Node<T> {
     this.gasUnits = this.mode === DisplayMode.Power ? "W" : getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Gas_Units, value => checkEnumValue(value, VolumeUnits));
     this._energyUnitPosition = getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Unit_Position, value => checkEnumValue(value, UnitPosition));
     this._prefixThreshold = new Decimal(getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Prefix_Threshold));
+  }
+  //================================================================================================================================================================================//
+
+  public updateHass(hass: HomeAssistant): void {
+    this.hass = hass;
   }
 
   //================================================================================================================================================================================//
@@ -260,9 +265,26 @@ export abstract class Node<T> {
 
     const deviceClass: string | undefined = this.hass.states[entityId].attributes.device_class;
 
-    if (deviceClass === DeviceClasses.Energy || deviceClass === DeviceClasses.Power) {
+
+    if (deviceClass === DeviceClasses.Energy) {
       return this.renderEnergyState(state, this.electricUnits);
     }
+ 
+    if (deviceClass === DeviceClasses.Power) {
+      const sourceUnit = this.hass.states[entityId].attributes.unit_of_measurement;
+      const powerInKw = sourceUnit === "kW" ? state : state / 1000;
+      const formattedValue = formatNumber(
+        new Decimal(powerInKw).toFixed(2),
+        this.hass.locale
+      );
+
+      return this._formatState(
+        formattedValue,
+        "kW",
+        getConfigValue(config, SecondaryInfoOptions.Unit_Position)
+      );
+    }
+
 
     const units: string | undefined = this.hass.states[entityId].attributes.unit_of_measurement;
     const decimals: number = getConfigValue(config, SecondaryInfoOptions.Display_Precision) ?? this.hass["entities"][entityId]?.display_precision ?? 0;
