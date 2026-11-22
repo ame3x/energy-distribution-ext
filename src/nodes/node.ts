@@ -55,7 +55,7 @@ export abstract class Node<T> {
   protected readonly gasUnits: string;
   protected readonly showSegmentGaps: boolean;
   protected readonly useHassStyles: boolean;
-  protected readonly hass: HomeAssistant;
+  protected hass: HomeAssistant;
   protected readonly style: CSSStyleDeclaration;
 
   protected abstract readonly colours: Colours;
@@ -146,6 +146,11 @@ export abstract class Node<T> {
     this.gasUnits = this.mode === DisplayMode.Power ? "W" : getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Gas_Units, value => checkEnumValue(value, VolumeUnits));
     this._energyUnitPosition = getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Unit_Position, value => checkEnumValue(value, UnitPosition));
     this._prefixThreshold = new Decimal(getConfigValue(this._energyUnitsConfig, EnergyUnitsOptions.Prefix_Threshold));
+  }
+  //================================================================================================================================================================================//
+
+  public updateHass(hass: HomeAssistant): void {
+    this.hass = hass;
   }
 
   //================================================================================================================================================================================//
